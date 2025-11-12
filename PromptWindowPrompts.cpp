@@ -738,6 +738,7 @@ void HoldClickFloatingWindow(FloatingWindow* wind, int windowIndex, Vector2 clic
 
 	if (loadedSamples.size() > 0 && sampleDisplay.knobSelected > -1) // Turn envelope knobs.
 	{
+		/*
 		if (sampleDisplay.knobSelected == 0)
 		{
 			float angle = atan2(3.0f - clickPos.x, 6.0f - clickPos.y);
@@ -760,6 +761,8 @@ void HoldClickFloatingWindow(FloatingWindow* wind, int windowIndex, Vector2 clic
 		}
 
 		DrawSampleDisplay();
+		*/
+		
 	}
 
 
@@ -768,9 +771,9 @@ void HoldClickFloatingWindow(FloatingWindow* wind, int windowIndex, Vector2 clic
 
 		if (wind->name == "Sample Editor")
 		{
-			if (clickPos.x > 19 && clickPos.x < 50 && clickPos.y > 1 && clickPos.y < 15) // Change frequencies.
+			if (clickPos.x > 17 && clickPos.x < 50 && clickPos.y > 1 && clickPos.y < 15) // Change frequencies.
 			{
-				sampleDisplay.frequencies[int(clickPos.x) - 20] = 14.0f - float(int(clickPos.y * 4.0f)) * 0.25f;
+				sampleDisplay.frequencies[int(clickPos.x) - 18] = 14.0f - float(int(clickPos.y * 4.0f)) * 0.25f;
 
 				toGenerateAdditiveWave = true;
 				//GenerateAdditiveWave();

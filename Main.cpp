@@ -5,12 +5,7 @@
 
 
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 
 #include "GlobalVariables.h"
@@ -125,6 +120,12 @@ void RunEngine()
     // Compile the shader
     glShaderSource(scrollBarVertexShader, 1, &scrollBarVertexShaderSource, NULL);
     glCompileShader(scrollBarVertexShader);
+
+    unsigned int knobVertexShader;
+    knobVertexShader = glCreateShader(GL_VERTEX_SHADER);
+    // Compile the shader
+    glShaderSource(knobVertexShader, 1, &knobVertexShaderSource, NULL);
+    glCompileShader(knobVertexShader);
     ////////////////////////////////////////////////////////////////////////////// Create and compile the fragment shaders
     unsigned int fragmentShader;
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -137,9 +138,16 @@ void RunEngine()
     unsigned int scrollBarShaderProgram;
     scrollBarShaderProgram = glCreateProgram();
 
+    unsigned int knobShaderProgram;
+    knobShaderProgram = glCreateProgram();
+
     glAttachShader(scrollBarShaderProgram, scrollBarVertexShader);
     glAttachShader(scrollBarShaderProgram, fragmentShader);
     glLinkProgram(scrollBarShaderProgram);
+
+    glAttachShader(knobShaderProgram, knobVertexShader);
+    glAttachShader(knobShaderProgram, fragmentShader);
+    glLinkProgram(knobShaderProgram);
 
     glAttachShader(uiShaderProgram, uiVertexShader);
     glAttachShader(uiShaderProgram, fragmentShader);
@@ -478,12 +486,54 @@ void RunEngine()
             }
 
 
-            
-
 
             glUseProgram(uiShaderProgram);
             glBindTexture(GL_TEXTURE_2D, gui.uiTexture);
             glBindVertexArray(sVAO);
+
+
+            // Draw modulator strength knobs.
+            glUseProgram(knobShaderProgram);
+            GLint windInShader = glGetUniformLocation(knobShaderProgram, "windowRatio");
+            glUniform1f(windInShader, screen.windowRatio);
+            for (int knob = 4; knob < gui.knobs.size(); knob++)
+            {
+                float uiPos[4];
+                uiPos[0] = gui.knobs[knob].position.x;
+                uiPos[1] = gui.knobs[knob].position.y;
+                uiPos[2] = 5.0f;
+                if (gui.knobs[knob].drag)
+                    uiPos[3] = 7.0f;
+                else
+                    uiPos[3] = 8.0f;
+                GLint offsetInShader2 = glGetUniformLocation(knobShaderProgram, "spriteOffset");
+                glUniform4f(offsetInShader2, uiPos[0], uiPos[1], uiPos[2], uiPos[3]);
+
+                GLint knobAngle = glGetUniformLocation(knobShaderProgram, "angle");
+                glUniform1f(knobAngle, gui.knobs[knob].rotation);
+
+
+
+
+                GLint shaderCol = glGetUniformLocation(knobShaderProgram, "textCol");
+                glUniform1f(shaderCol, 0.0f);
+
+                GLint shaderBg = glGetUniformLocation(knobShaderProgram, "bgCol");
+                glUniform1f(shaderBg, 0.0f);
+
+                GLint colorsInUIShader = glGetUniformLocation(knobShaderProgram, "uiColor");
+                glUniform3fv(colorsInUIShader, 18, gui.uiColors);
+
+
+
+
+                glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1); // Draw the sprites. 
+
+            }
+            
+
+
+            
 
             //GLint ratioInUIShader = glGetUniformLocation(uiShaderProgram, "windowRatio");
             //glUniform1f(ratioInUIShader, screen.windowRatio);
@@ -567,6 +617,50 @@ void RunEngine()
                     glUseProgram(uiShaderProgram);
                     glBindTexture(GL_TEXTURE_2D, gui.uiTexture);
                     glBindVertexArray(sVAO);
+
+                    // Draw the ADSR filter knobs.
+                    glUseProgram(knobShaderProgram);
+                    GLint ratioInUIShader2 = glGetUniformLocation(knobShaderProgram, "windowRatio");
+                    glUniform1f(ratioInUIShader2, screen.windowRatio);
+                    for (int knob = 0; knob < 4; knob++)
+                    {
+                        float uiPos[4];
+                        uiPos[0] = gui.knobs[knob].position.x;
+                        uiPos[1] = gui.knobs[knob].position.y;
+                        uiPos[2] = 5.0f;
+                        if (gui.knobs[knob].drag)
+                            uiPos[3] = 7.0f;
+                        else
+                            uiPos[3] = 8.0f;
+                        GLint posInShader2 = glGetUniformLocation(knobShaderProgram, "spriteOffset");
+                        glUniform4f(posInShader2, uiPos[0], uiPos[1], uiPos[2], uiPos[3]);
+
+                        GLint knobAngle = glGetUniformLocation(knobShaderProgram, "angle");
+                        glUniform1f(knobAngle, gui.knobs[knob].rotation);
+
+
+                        
+
+                        GLint shaderCol = glGetUniformLocation(knobShaderProgram, "textCol");
+                        glUniform1f(shaderCol, 0.0f);
+
+                        GLint shaderBg = glGetUniformLocation(knobShaderProgram, "bgCol");
+                        glUniform1f(shaderBg, 0.0f);
+
+                        GLint colorsInUIShader = glGetUniformLocation(knobShaderProgram, "uiColor");
+                        glUniform3fv(colorsInUIShader, 18, gui.uiColors);
+
+
+
+
+                        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1); // Draw the sprites. 
+
+                    }
+
+
+
+
+                    
                 }
 
                 if (i == 0) // Draw scrollbars.
@@ -711,9 +805,11 @@ void processInput(GLFWwindow* window)
             }
         }
 
+
+        // Drag scroll bars.
         bool usingScrollBar = false;
 
-        for (int bar = 0; bar < gui.scrollBars.size(); bar++) // Drag scroll bars.
+        for (int bar = 0; bar < gui.scrollBars.size(); bar++)
         {
             if (gui.scrollBars[bar].drag)
             {
@@ -812,6 +908,60 @@ void processInput(GLFWwindow* window)
                     }
                 }
             }
+
+
+            // Drag knobs
+            bool usingKnob = false;
+
+            for (int knob = 0; knob < gui.knobs.size(); knob++)
+            {
+                if (gui.knobs[knob].drag)
+                {
+                    usingKnob = true;
+
+                    //float angle = atan2(3.0f - clickPos.x, 6.0f - clickPos.y);
+                    //loadedSamples[editor.selectedSample].attack = 0.5f - (angle / (6.283f));
+
+                    float angle = atan2(gui.knobs[knob].position.x - gui.floatHoveredTile.x, gui.knobs[knob].position.y - gui.floatHoveredTile.y);
+
+
+                    //gui.knobs[knob].rotation = (angle) - 3.1416f;
+
+                    //gui.knobs[knob].rotation = angle;
+
+                    //if (gui.knobs[knob].rotation < 0)
+                    //    gui.knobs[knob].rotation = 0;
+                    //else if (gui.knobs[knob].rotation > 6.2831f)
+                    //    gui.knobs[knob].rotation = 6.2831f;
+
+                    float val = 0.5f - (angle / (6.283f));
+
+                    if (knob == 0)
+                        loadedSamples[editor.selectedSample].attack = val;
+                    if (knob == 1)
+                        loadedSamples[editor.selectedSample].decay = val;
+                    if (knob == 2)
+                        loadedSamples[editor.selectedSample].sustain = val;
+                    if (knob == 3)
+                        loadedSamples[editor.selectedSample].release = val;
+
+                    gui.knobs[knob].rotation = (val + 0.5f) * 6.2831f;
+
+                    gui.drawUIThisFrame = true;
+
+
+                }
+                else
+                {
+                    if (abs(gui.knobs[knob].position.x - gui.floatHoveredTile.x) < 1.0f && abs(gui.knobs[knob].position.y - gui.floatHoveredTile.y) < 1.0f)
+                    {
+                        gui.knobs[knob].drag = true;
+                    }
+                    else
+                        gui.knobs[knob].drag = false;
+                }
+            }
+
         }
 
 
@@ -848,6 +998,10 @@ void processInput(GLFWwindow* window)
         for (int bar = 0; bar < gui.scrollBars.size(); bar++) // Stop dragging scroll bars.
         {
             gui.scrollBars[bar].drag = false;
+        }
+        for (int knob = 0; knob < gui.knobs.size(); knob++) // Stop dragging scroll bars.
+        {
+            gui.knobs[knob].drag = false;
         }
     }
 
@@ -1712,7 +1866,7 @@ void pressButton(GLFWwindow* window)
         }
         else if (gui.hoveredTile.y == 11) // Open sample editor.
         {
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 32; i++)
             {
                 sampleDisplay.frequencies[i] = 0;
                 sampleDisplay.modFrequencies[i] = 0;
@@ -1828,9 +1982,12 @@ void pressButton(GLFWwindow* window)
         {
             if (hoveredXScrolled > 4)
             {
-                if (selectedX < 3 + channels[selectedChannel].effectCountPerRow * 5) // Mute/unmute
+                if (selectedX < 3 + channels[selectedChannel].effectCountPerRow * 5)
                 {
-                    channels[selectedChannel].muted = !channels[selectedChannel].muted;
+                    if (channels[selectedChannel].isModulator)  // Swap modulator between AM and FM synthesis.
+                        channels[selectedChannel].fmSynth = !channels[selectedChannel].fmSynth;
+                    else  // Mute/unmute
+                        channels[selectedChannel].muted = !channels[selectedChannel].muted;
                 }
                 else if (selectedX == 3 + channels[selectedChannel].effectCountPerRow * 5) // Add extra effect column.
                 {
@@ -2695,7 +2852,120 @@ void rightClickButton(GLFWwindow* window)
 
     // Open the Selection window.
     if (gui.hoveredTile.y > 15 && !editor.playingSong)
+    {
         windowController.InitializeWindow("Selection", gui.selectedTile, { 16, 16 });
+    }
+    else if (gui.hoveredTile.y > 11 && gui.hoveredTile.y < 15 && !editor.playingSong) // Select channel.
+    {
+        int selectedX = hoveredXScrolled - 4.0f;
+        int selectedChannel = 0;
+        bool inChannel = false;
+
+
+
+        while (!inChannel)
+        {
+            if (channels[selectedChannel].compressed)
+            {
+                if (selectedX >= 3)
+                {
+                    selectedX -= 3;
+                    selectedChannel++;
+
+
+
+                    if (selectedChannel >= channels.size())
+                    {
+                        inChannel = true;
+                    }
+                }
+                else
+                {
+                    inChannel = true;
+                }
+            }
+            else
+            {
+                if (selectedX >= 8 + channels[selectedChannel].effectCountPerRow * 5)
+                {
+                    selectedX -= 8 + channels[selectedChannel].effectCountPerRow * 5;
+                    selectedChannel++;
+
+
+
+                    if (selectedChannel >= channels.size())
+                    {
+                        inChannel = true;
+                    }
+                }
+                else
+                {
+                    inChannel = true;
+                }
+            }
+        }
+
+
+        if (selectedChannel < loadedSong.numberOfChannels && gui.hoveredTile.y != 12)
+        {
+            if (hoveredXScrolled > 4)
+            {
+                channels[selectedChannel].isModulator = !channels[selectedChannel].isModulator;
+                /*
+                if (selectedX < 3 + channels[selectedChannel].effectCountPerRow * 5) // Mute/unmute
+                {
+                    channels[selectedChannel].muted = !channels[selectedChannel].muted;
+                }
+                else if (selectedX == 3 + channels[selectedChannel].effectCountPerRow * 5) // Add extra effect column.
+                {
+                    if (channels[selectedChannel].effectCountPerRow < 8) // Max effects
+                    {
+                        channels[selectedChannel].effectCountPerRow++;
+                        loadedFrame = resizeSongFrameEffectColumns(loadedFrame);
+                        loadedSong.unsavedChanges = true;
+                    }
+                }
+                else if (selectedX == 6 + channels[selectedChannel].effectCountPerRow * 5) // Delete extra effect column.
+                {
+                    if (channels[selectedChannel].effectCountPerRow > 1) // Min effects
+                    {
+                        channels[selectedChannel].effectCountPerRow--;
+                        loadedFrame = resizeSongFrameEffectColumns(loadedFrame);
+                        loadedSong.unsavedChanges = true;
+                    }
+                }
+                */
+                gui.drawFrameThisFrame = true; // The interface has changed, and must be redrawn.
+            }
+        }
+        else
+        {
+            int hoverPosAfterChannels = hoveredXScrolled;
+            for (int ch = 0; ch < channels.size(); ch++)
+            {
+                if (channels[ch].compressed)
+                    hoverPosAfterChannels -= 3;
+                else
+                    hoverPosAfterChannels -= 8 + channels[ch].effectCountPerRow * 5;
+            }
+            if (hoverPosAfterChannels == 5 || hoverPosAfterChannels == 6) // Add channel
+            {
+                if (loadedSong.numberOfChannels < 64)
+                {
+                    ResizeDecoders(loadedSong.numberOfChannels + 1);
+                    loadedSong.unsavedChanges = true;
+                }
+            }
+            else if (hoverPosAfterChannels == 8 || hoverPosAfterChannels == 9) // Remove channel
+            {
+                if (loadedSong.numberOfChannels > 1)
+                {
+                    ResizeDecoders(loadedSong.numberOfChannels - 1);
+                    loadedSong.unsavedChanges = true;
+                }
+            }
+        }
+    }
 
     return;
 }

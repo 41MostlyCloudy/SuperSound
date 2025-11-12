@@ -134,7 +134,7 @@ void DrawSampleDisplay();
 
 void GenerateAdditiveWave();
 
-std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, float frequencies[30], float periodLen, float framesToWrite, float modPower);
+std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, float frequencies[32], float periodLen, float framesToWrite, float modPower);
 
 
 
@@ -644,7 +644,10 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
     if (sampleDisplay.pauseSample) // Don't play sounds if the sample is stopped. (This is only applied if playing a sample in the sample menu.
         return;
     else if (sampleDisplay.playingSample || toDrawSampleDisplay)
+    {
         DrawSampleDisplay();
+        return;
+    }
 
     if (editor.recordingSong)
     {
@@ -1937,6 +1940,10 @@ void stepSample(float elapsedMS)
             float inpterpVol = loadedSamples[channels[ch].instrument].release;
             channels[ch].envelopeVolume = channels[ch].envelopeVolume * (inpterpVol);
         }
+        else
+        {
+            channels[ch].envelopeVolume = 1.0f;
+        }
 
         
     }
@@ -2193,7 +2200,7 @@ void DrawSampleDisplay()
     if (sampleDisplay.playingSample)
     {
         ma_uint64 soundPos;
-        ma_decoder_get_cursor_in_pcm_frames(&g_pDecoders[0], &soundPos);
+        ma_decoder_get_cursor_in_pcm_frames(&loadingDecoder, &soundPos);
         sampleDisplay.samplePos = soundPos;
     }
     else
@@ -2267,40 +2274,68 @@ void DrawSampleDisplay()
             {
                 for (int i = lastFrameVal; i < frameVal; i++)
                 {
-                    sampleDisplay.pixelData[x + 800 * i].r = gui.uiColors[12] * brightness;
-                    sampleDisplay.pixelData[x + 800 * i].g = gui.uiColors[13] * 127;
-                    sampleDisplay.pixelData[x + 800 * i].b = gui.uiColors[14] * 127;
+                    if (i > 112)
+                    {
+                        float multi = (float(i - 112) / float(i - 112));
+                        sampleDisplay.pixelData[x + 800 * i].r = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].g = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].b = 1.0f * 127.0f * multi;
+                    }
+                    else
+                    {
+                        float multi = (float(i - 112) / float(i - 112));
+                        sampleDisplay.pixelData[x + 800 * i].r = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].g = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].b = 1.0f * 127.0f * multi;
+                    }
                 }
             }
             else
             {
                 for (int i = frameVal; i <= lastFrameVal; i++)
                 {
-                    sampleDisplay.pixelData[x + 800 * i].r = gui.uiColors[12] * brightness;
-                    sampleDisplay.pixelData[x + 800 * i].g = gui.uiColors[13] * 127;
-                    sampleDisplay.pixelData[x + 800 * i].b = gui.uiColors[14] * 127;
+                    if (i > 112)
+                    {
+                        float multi = (float(i - 112) / float(i - 112));
+                        sampleDisplay.pixelData[x + 800 * i].r = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].g = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].b = 1.0f * 127.0f * multi;
+                    }
+                    else
+                    {
+                        float multi = (float(i - 112) / float(i - 112));
+                        sampleDisplay.pixelData[x + 800 * i].r = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].g = 1.0f * 127.0f * multi;
+                        sampleDisplay.pixelData[x + 800 * i].b = 1.0f * 127.0f * multi;
+                    }
                 }
             }
-
+            /*
             if (frameVal2 > lastFrameVal2)
             {
                 for (int i = lastFrameVal2; i < frameVal2; i++)
                 {
-                    sampleDisplay.pixelData[x + 800 * i].r += gui.uiColors[12] * brightness;
-                    sampleDisplay.pixelData[x + 800 * i].g += gui.uiColors[13] * brightness;
-                    sampleDisplay.pixelData[x + 800 * i].b += gui.uiColors[14] * brightness;
+                    for (int y = 0; y < i; y++)
+                    {
+                        sampleDisplay.pixelData[x + 800 * y].r += gui.uiColors[12] * brightness;
+                        sampleDisplay.pixelData[x + 800 * y].g += gui.uiColors[13] * brightness;
+                        sampleDisplay.pixelData[x + 800 * y].b += gui.uiColors[14] * brightness;
+                    }
                 }
             }
             else
             {
-                for (int i = frameVal2; i <= lastFrameVal2; i++)
+                for (int i = lastFrameVal2; i < frameVal2; i++)
                 {
-                    sampleDisplay.pixelData[x + 800 * i].r += gui.uiColors[12] * brightness;
-                    sampleDisplay.pixelData[x + 800 * i].g += gui.uiColors[13] * brightness;
-                    sampleDisplay.pixelData[x + 800 * i].b += gui.uiColors[14] * brightness;
+                    for (int y = 0; y < i; y++)
+                    {
+                        sampleDisplay.pixelData[x + 800 * y].r += gui.uiColors[12] * brightness;
+                        sampleDisplay.pixelData[x + 800 * y].g += gui.uiColors[13] * brightness;
+                        sampleDisplay.pixelData[x + 800 * y].b += gui.uiColors[14] * brightness;
+                    }
                 }
             }
-
+            */
             lastFrameVal = frameVal;
             lastFrameVal2 = frameVal2;
         }
@@ -2746,7 +2781,7 @@ void GenerateAdditiveWave()
 
 
 
-std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, float frequencies[30], float periodLen, float framesToWrite, float modPower)
+std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, float frequencies[32], float periodLen, float framesToWrite, float modPower)
 {
     
 
@@ -2782,7 +2817,7 @@ std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, f
         {
             float vol = 0;
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 32; i++)
             {
                 vol += sin(float(x) * float(i + 1) * 6.28312 / modPeriod) * frequencies[i] * 0.02f;
                 //sampleDisplay.frequencies
@@ -2797,7 +2832,7 @@ std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, f
             float vol = 0;
 
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 32; i++)
             {
                 float waveLen = float(modPeriod * 2.0f) / float(i + 1);
 
@@ -2835,7 +2870,7 @@ std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, f
             float vol = 0;
 
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 32; i++)
             {
                 float waveLen = float(modPeriod) / float(i + 1);
                 float periodPos = float(x % int(waveLen)) / waveLen;
@@ -2862,7 +2897,7 @@ std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, f
             float vol = 0;
 
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 32; i++)
             {
                 float waveLen = float(modPeriod) / float(i + 1);
                 float periodPos = float(x % int(waveLen)) / waveLen;
@@ -2885,7 +2920,7 @@ std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, f
             float vol = 0;
 
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 32; i++)
             {
                 float wave = float((rand() % 100) - 50) * 0.01;
 

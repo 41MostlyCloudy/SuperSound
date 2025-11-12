@@ -15,6 +15,15 @@
 
 
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+
+
 // Floating-point 2d position
 struct Vector2 { float x = 0; float y = 0; };
 
@@ -121,6 +130,15 @@ struct ScrollBar
 };
 
 
+struct Knob
+{
+	Vector2 position;
+	float rotation = 0.0f; // The knobs position from 0 to 1.
+	Vector2 mouseOffset;
+	bool drag = false;
+};
+
+
 struct GUI
 {
 	// Scrollbars
@@ -132,6 +150,11 @@ struct GUI
 	{ { 6, 56 }, 0.0f, 84, true, false }, // NoteScrollHorizontal
 	{ { -1, -1 }, 0.0f, 17, false, false }, // fileScroll
 	//{ { -1, -1 }, 0.0f, 49, true, false }, // sampleEditorScroll
+	};
+
+	std::vector <Knob> knobs =
+	{
+		{}, {}, {}, {} // The sample editor ADSR filter.
 	};
 
 
@@ -316,6 +339,10 @@ struct Channel
 	bool compressed = false;
 	bool loopNote = true;
 	bool toUninitialize = false;
+
+	bool isModulator = false;
+	bool fmSynth = false; // AM or FM synthesis if used as a modulator.
+	float modulatorStrength = 0.0f;
 
 	float startBetweenFrames = 0.0f;
 
@@ -578,8 +605,8 @@ struct SampleDisplay
 	int samplePos = 0;
 	int sampleStartPos = 0;
 
-	float frequencies[30];
-	float modFrequencies[30];
+	float frequencies[32];
+	float modFrequencies[32];
 
 
 	int knobSelected = -1; // 0=A, 1=D, 2=S, 3=R

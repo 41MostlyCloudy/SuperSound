@@ -104,6 +104,62 @@ const char* scrollBarVertexShaderSource = "#version 330 core\n"
 
 
 
+const char* knobVertexShaderSource = "#version 330 core\n"
+"layout (location = 0) in vec2 aPos;\n"
+"layout (location = 1) in vec2 aTexCoord;\n"
+
+"out vec2 TexCoord;\n"
+
+"uniform vec4 spriteOffset;\n"
+"uniform float textCol;\n"
+"uniform float bgCol;\n"
+"uniform vec3 uiColors[18];\n"
+"uniform float windowRatio;\n"
+
+"uniform float angle;\n"
+
+"out vec3 textC;\n"
+"out vec3 bgC;\n"
+
+
+"void main()\n"
+"{\n"
+
+
+
+
+"   gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
+
+"	vec2 offset = vec2(spriteOffset.x, spriteOffset.y);\n"
+
+
+"	gl_Position.x -= 1.0;\n"
+"	gl_Position.x += offset.x * (1.0 / 46.0);\n"
+
+"	gl_Position.y += 1.0;\n"
+"	gl_Position.y -= offset.y * (1.0 / 28.5);\n"
+
+"	gl_Position.x += (1.5 / 92.0) * sin(angle);\n"
+"	gl_Position.y += (1.5 / 56.0) * cos(angle);\n"
+
+
+"	if (windowRatio < 1)\n"
+"		gl_Position.x *= windowRatio;\n"
+"	else\n"
+"		gl_Position.y /= windowRatio;\n"
+
+
+"	TexCoord = aTexCoord;\n"
+"	TexCoord.x += (8.0f / 256.0f) * spriteOffset.z;\n"
+"	TexCoord.y += (8.0f / 256.0f) * spriteOffset.w;\n"
+
+"	textC = uiColors[int(textCol)];\n"
+"	bgC = uiColors[int(bgCol)];\n"
+
+"}\0";
+
+
+
 // Fragment shader
 const char* fragmentShaderSource = "#version 330 core\n"
 "out vec4 FragColor;\n"
@@ -129,6 +185,11 @@ const char* fragmentShaderSource = "#version 330 core\n"
 "   if (FragColor.r == 0 && FragColor.g == 1 && FragColor.b == 0)\n"
 "   {"
 "		FragColor.rgb = textC;\n"
+"   }"
+
+"   if (FragColor.r == 0 && FragColor.g == 1 && FragColor.b == 1)\n"
+"   {"
+"		discard;\n"
 "   }"
 
 "}\0";
