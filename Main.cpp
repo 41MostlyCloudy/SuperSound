@@ -37,7 +37,6 @@ void pressButton(GLFWwindow* window);
 
 void pressAndHoldButton(GLFWwindow* window);
 
-
 void rightClickButton(GLFWwindow* window);
 
 void releaseButton();
@@ -121,11 +120,11 @@ void RunEngine()
     glShaderSource(scrollBarVertexShader, 1, &scrollBarVertexShaderSource, NULL);
     glCompileShader(scrollBarVertexShader);
 
-    unsigned int knobVertexShader;
-    knobVertexShader = glCreateShader(GL_VERTEX_SHADER);
+    unsigned int dialVertexShader;
+    dialVertexShader = glCreateShader(GL_VERTEX_SHADER);
     // Compile the shader
-    glShaderSource(knobVertexShader, 1, &knobVertexShaderSource, NULL);
-    glCompileShader(knobVertexShader);
+    glShaderSource(dialVertexShader, 1, &dialVertexShaderSource, NULL);
+    glCompileShader(dialVertexShader);
     ////////////////////////////////////////////////////////////////////////////// Create and compile the fragment shaders
     unsigned int fragmentShader;
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -138,16 +137,16 @@ void RunEngine()
     unsigned int scrollBarShaderProgram;
     scrollBarShaderProgram = glCreateProgram();
 
-    unsigned int knobShaderProgram;
-    knobShaderProgram = glCreateProgram();
+    unsigned int dialShaderProgram;
+    dialShaderProgram = glCreateProgram();
 
     glAttachShader(scrollBarShaderProgram, scrollBarVertexShader);
     glAttachShader(scrollBarShaderProgram, fragmentShader);
     glLinkProgram(scrollBarShaderProgram);
 
-    glAttachShader(knobShaderProgram, knobVertexShader);
-    glAttachShader(knobShaderProgram, fragmentShader);
-    glLinkProgram(knobShaderProgram);
+    glAttachShader(dialShaderProgram, dialVertexShader);
+    glAttachShader(dialShaderProgram, fragmentShader);
+    glLinkProgram(dialShaderProgram);
 
     glAttachShader(uiShaderProgram, uiVertexShader);
     glAttachShader(uiShaderProgram, fragmentShader);
@@ -493,35 +492,42 @@ void RunEngine()
 
 
             // Draw modulator strength knobs.
-            glUseProgram(knobShaderProgram);
-            GLint windInShader = glGetUniformLocation(knobShaderProgram, "windowRatio");
+            glUseProgram(dialShaderProgram);
+            GLint windInShader = glGetUniformLocation(dialShaderProgram, "windowRatio");
             glUniform1f(windInShader, screen.windowRatio);
-            for (int knob = 4; knob < gui.knobs.size(); knob++)
+            for (int knob = 4; knob < gui.dials.size(); knob++)
             {
                 float uiPos[4];
-                uiPos[0] = gui.knobs[knob].position.x;
-                uiPos[1] = gui.knobs[knob].position.y;
-                uiPos[2] = 5.0f;
-                if (gui.knobs[knob].drag)
+                uiPos[0] = gui.dials[knob].position.x;
+                uiPos[1] = gui.dials[knob].position.y;
+                uiPos[2] = 1.0f;
+
+                if (gui.dials[knob].drag)
                     uiPos[3] = 7.0f;
                 else
                     uiPos[3] = 8.0f;
-                GLint offsetInShader2 = glGetUniformLocation(knobShaderProgram, "spriteOffset");
+
+                if (knob > 3 && channels[gui.dials[knob].channel].muted)
+                {
+                    uiPos[2] = 0.0f;
+                }
+
+                GLint offsetInShader2 = glGetUniformLocation(dialShaderProgram, "spriteOffset");
                 glUniform4f(offsetInShader2, uiPos[0], uiPos[1], uiPos[2], uiPos[3]);
 
-                GLint knobAngle = glGetUniformLocation(knobShaderProgram, "angle");
-                glUniform1f(knobAngle, gui.knobs[knob].rotation);
+                GLint knobAngle = glGetUniformLocation(dialShaderProgram, "angle");
+                glUniform1f(knobAngle, gui.dials[knob].rotation);
 
 
 
 
-                GLint shaderCol = glGetUniformLocation(knobShaderProgram, "textCol");
+                GLint shaderCol = glGetUniformLocation(dialShaderProgram, "textCol");
                 glUniform1f(shaderCol, 0.0f);
 
-                GLint shaderBg = glGetUniformLocation(knobShaderProgram, "bgCol");
+                GLint shaderBg = glGetUniformLocation(dialShaderProgram, "bgCol");
                 glUniform1f(shaderBg, 0.0f);
 
-                GLint colorsInUIShader = glGetUniformLocation(knobShaderProgram, "uiColor");
+                GLint colorsInUIShader = glGetUniformLocation(dialShaderProgram, "uiColor");
                 glUniform3fv(colorsInUIShader, 18, gui.uiColors);
 
 
@@ -619,35 +625,35 @@ void RunEngine()
                     glBindVertexArray(sVAO);
 
                     // Draw the ADSR filter knobs.
-                    glUseProgram(knobShaderProgram);
-                    GLint ratioInUIShader2 = glGetUniformLocation(knobShaderProgram, "windowRatio");
+                    glUseProgram(dialShaderProgram);
+                    GLint ratioInUIShader2 = glGetUniformLocation(dialShaderProgram, "windowRatio");
                     glUniform1f(ratioInUIShader2, screen.windowRatio);
                     for (int knob = 0; knob < 4; knob++)
                     {
                         float uiPos[4];
-                        uiPos[0] = gui.knobs[knob].position.x;
-                        uiPos[1] = gui.knobs[knob].position.y;
-                        uiPos[2] = 5.0f;
-                        if (gui.knobs[knob].drag)
+                        uiPos[0] = gui.dials[knob].position.x;
+                        uiPos[1] = gui.dials[knob].position.y;
+                        uiPos[2] = 1.0f;
+                        if (gui.dials[knob].drag)
                             uiPos[3] = 7.0f;
                         else
                             uiPos[3] = 8.0f;
-                        GLint posInShader2 = glGetUniformLocation(knobShaderProgram, "spriteOffset");
+                        GLint posInShader2 = glGetUniformLocation(dialShaderProgram, "spriteOffset");
                         glUniform4f(posInShader2, uiPos[0], uiPos[1], uiPos[2], uiPos[3]);
 
-                        GLint knobAngle = glGetUniformLocation(knobShaderProgram, "angle");
-                        glUniform1f(knobAngle, gui.knobs[knob].rotation);
+                        GLint knobAngle = glGetUniformLocation(dialShaderProgram, "angle");
+                        glUniform1f(knobAngle, gui.dials[knob].rotation);
 
 
                         
 
-                        GLint shaderCol = glGetUniformLocation(knobShaderProgram, "textCol");
+                        GLint shaderCol = glGetUniformLocation(dialShaderProgram, "textCol");
                         glUniform1f(shaderCol, 0.0f);
 
-                        GLint shaderBg = glGetUniformLocation(knobShaderProgram, "bgCol");
+                        GLint shaderBg = glGetUniformLocation(dialShaderProgram, "bgCol");
                         glUniform1f(shaderBg, 0.0f);
 
-                        GLint colorsInUIShader = glGetUniformLocation(knobShaderProgram, "uiColor");
+                        GLint colorsInUIShader = glGetUniformLocation(dialShaderProgram, "uiColor");
                         glUniform3fv(colorsInUIShader, 18, gui.uiColors);
 
 
@@ -913,16 +919,16 @@ void processInput(GLFWwindow* window)
             // Drag knobs
             bool usingKnob = false;
 
-            for (int knob = 0; knob < gui.knobs.size(); knob++)
+            for (int knob = 0; knob < gui.dials.size(); knob++)
             {
-                if (gui.knobs[knob].drag)
+                if (gui.dials[knob].drag)
                 {
                     usingKnob = true;
 
                     //float angle = atan2(3.0f - clickPos.x, 6.0f - clickPos.y);
                     //loadedSamples[editor.selectedSample].attack = 0.5f - (angle / (6.283f));
 
-                    float angle = atan2(gui.knobs[knob].position.x - gui.floatHoveredTile.x, gui.knobs[knob].position.y - gui.floatHoveredTile.y);
+                    float angle = atan2(gui.dials[knob].position.x - gui.floatHoveredTile.x, gui.dials[knob].position.y - gui.floatHoveredTile.y);
 
 
                     //gui.knobs[knob].rotation = (angle) - 3.1416f;
@@ -944,8 +950,26 @@ void processInput(GLFWwindow* window)
                         loadedSamples[editor.selectedSample].sustain = val;
                     if (knob == 3)
                         loadedSamples[editor.selectedSample].release = val;
+                    else
+                    {
+                        // Find the associated channel.
+                        /*
+                        //int modCount = 0;
+                        int modChannel = 0;
+                        for (int i = 0; i < loadedSong.numberOfChannels; i++)
+                        {
+                            if (channels[i].isModulator)
+                            {
+                                //modCount++;
+                                modChannel++;
+                            }
+                        }*/
 
-                    gui.knobs[knob].rotation = (val + 0.5f) * 6.2831f;
+
+                        channels[gui.dials[knob].channel].modulatorStrength = val;
+                    }
+
+                    gui.dials[knob].rotation = (val + 0.5f) * 6.2831f;
 
                     gui.drawUIThisFrame = true;
 
@@ -953,12 +977,18 @@ void processInput(GLFWwindow* window)
                 }
                 else
                 {
-                    if (abs(gui.knobs[knob].position.x - gui.floatHoveredTile.x) < 1.0f && abs(gui.knobs[knob].position.y - gui.floatHoveredTile.y) < 1.0f)
+                    if (abs(gui.dials[knob].position.x - gui.floatHoveredTile.x) < 1.0f && abs(gui.dials[knob].position.y - gui.floatHoveredTile.y) < 1.0f)
                     {
-                        gui.knobs[knob].drag = true;
+                        bool otherKnobSelected = false;
+                        for (int k = 0; k < gui.dials.size(); k++)
+                            if (gui.dials[k].drag)
+                                otherKnobSelected = true;
+
+                        if (!otherKnobSelected)
+                            gui.dials[knob].drag = true;
                     }
                     else
-                        gui.knobs[knob].drag = false;
+                        gui.dials[knob].drag = false;
                 }
             }
 
@@ -999,9 +1029,9 @@ void processInput(GLFWwindow* window)
         {
             gui.scrollBars[bar].drag = false;
         }
-        for (int knob = 0; knob < gui.knobs.size(); knob++) // Stop dragging scroll bars.
+        for (int knob = 0; knob < gui.dials.size(); knob++) // Stop dragging scroll bars.
         {
-            gui.knobs[knob].drag = false;
+            gui.dials[knob].drag = false;
         }
     }
 
@@ -1737,6 +1767,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 }
 
 
+
 void pressButton(GLFWwindow* window)
 {
     int hoveredXScrolled = gui.hoveredTile.x + gui.frameScroll.x;
@@ -1878,7 +1909,7 @@ void pressButton(GLFWwindow* window)
     }
 
 
-    if (gui.hoveredTile.y > 11 && gui.hoveredTile.y < 15) // Select channel mute buttons.
+    if (gui.hoveredTile.y > 11 && gui.hoveredTile.y < 16) // Start/stop song.
     {
         if (gui.hoveredTile.x < 4) // Start/pause song.
         {
@@ -1913,6 +1944,10 @@ void pressButton(GLFWwindow* window)
                         if (editor.channelBeingMoved == -1)
                             editor.channelBeingMoved = selectedChannel;
                         editor.channelMoveTo = selectedChannel;
+                    }
+                    else if (gui.hoveredTile.y == 15) // Toggle channel mute
+                    {
+                        channels[selectedChannel].muted = !channels[selectedChannel].muted;
                     }
                     else
                     {
@@ -1953,11 +1988,15 @@ void pressButton(GLFWwindow* window)
                             editor.channelBeingMoved = selectedChannel;
                         editor.channelMoveTo = selectedChannel;
                     }
+                    else if (gui.hoveredTile.y == 15) // Toggle channel mute
+                    {
+                        channels[selectedChannel].muted = !channels[selectedChannel].muted;
+                    }
                     else
                     {
                         channels[selectedChannel].compressed = true;
-                        gui.drawFrameThisFrame = true;
                     }
+                    gui.drawFrameThisFrame = true;
                     return;
                 }
                 if (selectedX >= 8 + channels[selectedChannel].effectCountPerRow * 5)
@@ -1985,9 +2024,12 @@ void pressButton(GLFWwindow* window)
                 if (selectedX < 3 + channels[selectedChannel].effectCountPerRow * 5)
                 {
                     if (channels[selectedChannel].isModulator)  // Swap modulator between AM and FM synthesis.
-                        channels[selectedChannel].fmSynth = !channels[selectedChannel].fmSynth;
-                    else  // Mute/unmute
-                        channels[selectedChannel].muted = !channels[selectedChannel].muted;
+                    {
+                        if (selectedX > 3 && selectedX < 7 && gui.hoveredTile.y == 14)
+                            channels[selectedChannel].fmSynth = !channels[selectedChannel].fmSynth;
+                    }
+                    //else  // Mute/unmute
+                    //    channels[selectedChannel].muted = !channels[selectedChannel].muted;
                 }
                 else if (selectedX == 3 + channels[selectedChannel].effectCountPerRow * 5) // Add extra effect column.
                 {
@@ -2466,7 +2508,7 @@ void pressAndHoldButton(GLFWwindow* window)
 
 
 
-    if (gui.hoveredTile.y > 11 && gui.hoveredTile.y < 15 && !editor.playingSong) // Select channel mute buttons.
+    if (gui.hoveredTile.y > 11 && gui.hoveredTile.y < 16 && !editor.playingSong) // Select channel mute buttons.
     {
         int selectedX = hoveredXScrolled - 4.0f;
         int selectedChannel = 0;
@@ -2486,6 +2528,7 @@ void pressAndHoldButton(GLFWwindow* window)
                             editor.channelBeingMoved = selectedChannel;
                         editor.channelMoveTo = selectedChannel;
                     }
+                    
                     gui.drawFrameThisFrame = true;
                     return;
                 }
@@ -2910,7 +2953,16 @@ void rightClickButton(GLFWwindow* window)
         {
             if (hoveredXScrolled > 4)
             {
-                channels[selectedChannel].isModulator = !channels[selectedChannel].isModulator;
+                if (channels[selectedChannel].isModulator)
+                {
+                    channels[selectedChannel].isModulator = false;
+                    channels[selectedChannel].isSynth = false;
+                }
+                else if (channels[selectedChannel].isSynth)
+                    channels[selectedChannel].isModulator = true;
+                else
+                    channels[selectedChannel].isSynth = true;
+
                 /*
                 if (selectedX < 3 + channels[selectedChannel].effectCountPerRow * 5) // Mute/unmute
                 {

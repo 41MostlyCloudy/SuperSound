@@ -148,7 +148,7 @@ std::vector <float> ConstructWave(int waveType, std::vector <float> modulator, f
 
 
 
-ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, float frameCount, int channel, float betweenFrames, ma_uint64 offset);
+ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, float* pModulatorF32, float frameCount, int channel, float betweenFrames, ma_uint64 offset, bool fm);
 
 void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 
@@ -204,8 +204,16 @@ bool toDrawSampleDisplay = false;
 
 
 
-ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, float frameCount, int channel, float betweenFrames, ma_uint64 offset)
+ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, float* pModulatorF32, float frameCount, int channel, float betweenFrames, ma_uint64 offset, bool fm)
 {   
+    
+
+    
+
+
+
+
+
     //The way mixing works is that we just read into a temporary buffer, then take the contents of that buffer and mix it with the
     //contents of the output buffer by simply adding the samples together. You could also clip the samples to -1..+1, but I'm not
     //doing that in this example.
@@ -240,14 +248,25 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
     //float dt = 1.0f / 48000.0f;
     //float alpha2 = RC / (RC + dt);
 
-    
-    float frameResolution = int(frameCount) / frameCount;
     float scaledPitch = channels[channel].pitch + channels[channel].pitchWaveOffset;
+
+    if (fm)
+    {
+        scaledPitch *= pModulatorF32[0];
+        //addSound *= pModulatorF32[(iSample + x + totalFramesRead + offset) * 2 + 1];
+    }
 
     if (scaledPitch > 8)
         scaledPitch = 8;
     else if (scaledPitch < 0.05)
         scaledPitch = 0.05;
+
+    if (scaledPitch > 1.0f)
+        frameCount *= scaledPitch;
+
+    
+    float frameResolution = int(frameCount) / frameCount;
+    
 
     scaledPitch *= frameResolution;
 
@@ -289,6 +308,17 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
         
         ma_decoder_read_pcm_frames(pDecoder, temp, framesToReadThisIteration, &framesReadThisIteration); // Read new frames to temp.
 
+
+        /*
+        for (int fr = 0; fr < framesToReadThisIteration; fr++)
+        {
+            float vol = sin(1.0f * 6.283 * float(fr)) * 1.0f;
+            temp[fr * 2] = vol;
+            temp[fr * 2 + 1] = vol;
+        }
+
+        framesReadThisIteration = framesToReadThisIteration;
+        */
 
         if (loadedSamples[channels[channel].instrument].looping) // Loop
         {
@@ -381,6 +411,9 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
             volumeRight = 0.0f;
 
         float totalVol = channels[channel].volume * channels[channel].envelopeVolume;
+
+        
+
         if (totalVol < 0.0f)
             totalVol = 0.0f;
         else if (totalVol > 1.0f)
@@ -391,8 +424,7 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
 
         
 
-        
-        //fr *= scaledPitch;
+
 
         for (ma_uint32 i = 0; i < fr; i++)
         {
@@ -400,36 +432,8 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
             temp[i * 2 + 1] = temp[i * 2 + 1] * volumeRight;
         }
 
-        
-        // Highpass
-        /*
-        for (ma_uint32 i = 0; i < fr; i++)
-        {
-            float input = temp[(i + totalFramesRead) * 2];
-            float output = alpha2 * (channels[channel].prevHighPassSampleL + input - channels[channel].prevHighPassSampleLI);
-            temp[(i + totalFramesRead) * 2] = output;
-            channels[channel].prevHighPassSampleLI = input;
-            channels[channel].prevHighPassSampleL = output;
 
 
-            input = temp[(i + totalFramesRead) * 2 + 1];
-            output = alpha2 * (channels[channel].prevHighPassSampleR + input - channels[channel].prevHighPassSampleRI);
-            temp[(i + totalFramesRead) * 2 + 1] = output;
-            channels[channel].prevHighPassSampleRI = input;
-            channels[channel].prevHighPassSampleR = output;
-
-
-            //if ((i + totalFramesRead) * 2 > 1)
-            //{
-                //channels[channel].prevHighPassSampleL = alpha2 * (channels[channel].prevHighPassSampleL + temp[(i + totalFramesRead) * 2] - temp[((i + totalFramesRead) * 2) - 2]);
-                //temp[(i + totalFramesRead) * 2] = channels[channel].prevHighPassSampleL;
-
-                //channels[channel].prevHighPassSampleR = alpha2 * (channels[channel].prevHighPassSampleR + temp[(i + totalFramesRead) * 2 + 1] - temp[((i + totalFramesRead) * 2) - 1]);
-                //temp[((i + totalFramesRead) * 2) + 1] = channels[channel].prevHighPassSampleR;
-
-            //}
-
-        }*/
 
 
         float framesRead = float(framesReadThisIteration);
@@ -473,7 +477,15 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
                 channels[channel].prevHighPassSampleL = addSound;
 
                 avgVolL += abs(addSound);
+
+                if (!fm)
+                {
+                    addSound *= pModulatorF32[(iSample + x + totalFramesRead + offset) * 2];
+                }
+
                 pOutputF32[(iSample + x + totalFramesRead + offset) * 2] += addSound;
+
+                ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 addSound = temp[(index1 * 2) + 1] * (1.0f - t) + temp[(index2 * 2) + 1] * t;
 
                 // Lowpass
@@ -487,6 +499,12 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
                 channels[channel].prevHighPassSampleR = addSound;
 
                 avgVolR += abs(addSound);
+
+                if (!fm)
+                {
+                    addSound *= pModulatorF32[(iSample + x + totalFramesRead + offset) * 2 + 1];
+                }
+
                 pOutputF32[(iSample + x + totalFramesRead + offset) * 2 + 1] += addSound;
 
                 
@@ -497,19 +515,13 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
 
         
 
-        //if (channels[channel].bitCrush > 0)
-        //{
-        //    for (ma_uint32 iSample = 0; iSample < framesRead; iSample++)
-        //    {
-
-        //    }
-        //}
+        
 
         
         
         leftoverFrame = resampleIndex - ma_uint32(resampleIndex);
 
-        //resampleIndex = (ma_uint32)resampleIndex;
+        
 
         
 
@@ -555,7 +567,7 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
 
     
 
-    //std::cout << "  " << avgVolL;
+    
         
     if (totalFramesRead > 0)
     {
@@ -577,36 +589,7 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, f
     }
     
 
-    //totalFramesRead = iSample;
     
-
-    //LowPassFilter* filter = (LowPassFilter*)pDecoder->pUserData;
-
-    //for (int i = 0; i < totalFramesRead * 2; i += 2)
-    //{
-    //    temp[i] = resampleTemp[i];
-    //    temp[i + 1] = resampleTemp[i + 1];
-    //}
-
-    /*
-    for (int i = 2; i < totalFramesRead * 2; i += 2)
-    {
-        
-
-        //previousSampleR = alpha * temp[i] + (1.0f - alpha) * previousSampleR;
-        //temp[i] = previousSampleR;
-        //previousSampleL = alpha * temp[i + 1] + (1.0f - alpha) * previousSampleL;
-        //temp[i + 1] = previousSampleL;
-
-        previousSampleR = temp[i] - temp[i - 2] + alpha * previousSampleR;
-        temp[i] = previousSampleR;
-        previousSampleL = temp[i + 1] - temp[i - 1] + alpha * previousSampleL;
-        temp[i + 1] = previousSampleL;
-
-        
-
-    }
-    */
     
     
     
@@ -674,6 +657,12 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
     */
 
     float* pOutputF32 = (float*)pOutput;
+    float pModulatorF32[7700];
+    for (int i = 0; i < 7700; i++)
+        pModulatorF32[i] = 1.0f;
+    bool fm = false;
+    
+    //float pModulatorF32;
 
     // This example assumes the device was configured to use ma_format_f32.
     for (int channel = 0; channel < loadedSong.numberOfChannels; channel++)
@@ -686,11 +675,29 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
         }
         else if (channelInitialized[channel] && !channels[channel].muted)
         {
+            //float samplePitch = channels[channel].pitch + channels[channel].pitchWaveOffset;
+            //if (channel > 0)
+                //samplePitch = samplePitch * () + 
+            
+
             float channelFrameCount = frameCount;
-            if (channels[channel].pitch + channels[channel].pitchWaveOffset > 1.0f)
-                channelFrameCount *= channels[channel].pitch + channels[channel].pitchWaveOffset;
+            //if (samplePitch > 1.0f)
+            //    channelFrameCount *= samplePitch;
             ma_uint64 framesRead = 0;
-            framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[channel], pOutputF32, channelFrameCount, channel, channels[channel].startBetweenFrames, framesRead);
+
+            
+
+            if (channels[channel].isModulator)
+            {
+                framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[channel], pModulatorF32, pModulatorF32, channelFrameCount, channel, channels[channel].startBetweenFrames, framesRead, fm);
+                fm = channels[channel].fmSynth;
+            }
+            else
+            {
+                framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[channel], pOutputF32, pModulatorF32, channelFrameCount, channel, channels[channel].startBetweenFrames, framesRead, fm);
+                for (int i = 0; i < 7700; i++)
+                    pModulatorF32[i] = 1.0f;
+            }
 
             if (framesRead < frameCount)
             {
@@ -1989,6 +1996,8 @@ void RecordSong()
         stepSongInCallback(float(stepSize) / 48000.0f * 1000.0f);
 
         float pOut[7700] = { 0.0f };
+        float pModulatorF32[7700] = { 0.0f };
+        float fm = 0;
 
         float* pOutputF32 = (float*)pOut;
 
@@ -2010,7 +2019,19 @@ void RecordSong()
                 if (channels[channel].pitch + channels[channel].pitchWaveOffset > 1.0f)
                     channelFrameCount *= channels[channel].pitch + channels[channel].pitchWaveOffset;
                 ma_uint64 framesRead = 0;
-                framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[channel], pOutputF32, channelFrameCount, channel, channels[channel].startBetweenFrames, framesRead);
+
+
+                if (channels[channel].isModulator)
+                {
+                    framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[channel], pModulatorF32, pModulatorF32, channelFrameCount, channel, channels[channel].startBetweenFrames, framesRead, fm);
+                    fm = channels[channel].fmSynth;
+                }
+                else
+                {
+                    framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[channel], pOutputF32, pModulatorF32, channelFrameCount, channel, channels[channel].startBetweenFrames, framesRead, fm);
+                    for (int i = 0; i < 7700; i++)
+                        pModulatorF32[i] = 0;
+                }
                 if (framesRead < stepSize)
                 {
                     StopSample(channel);
@@ -2159,23 +2180,24 @@ void DrawSampleDisplay()
         
         for (int y = 0; y < 192 - 16; y++)
         {
-            
+            sampleDisplay.pixelData[x + 800 * y] = { 0, 0, 0 };
 
-            sampleDisplay.pixelData[x + 800 * y].r = gui.uiColors[3] * y * brightness;
-            sampleDisplay.pixelData[x + 800 * y].g = gui.uiColors[4] * y * 1;
-            sampleDisplay.pixelData[x + 800 * y].b = gui.uiColors[5] * y * 1;
+            
         }
         for (int y = 192 - 16; y < 192; y++)
         {
-            sampleDisplay.pixelData[x + 800 * y].r = gui.uiColors[3] * (y - 192 + 16) * 16 * brightness;
-            sampleDisplay.pixelData[x + 800 * y].g = gui.uiColors[4] * (y - 192 + 16) * 16;
-            sampleDisplay.pixelData[x + 800 * y].b = gui.uiColors[5] * (y - 192 + 16) * 16;
+            sampleDisplay.pixelData[x + 800 * y].r = gui.uiColors[3] * 255.0f;
+            sampleDisplay.pixelData[x + 800 * y].g = gui.uiColors[4] * 255.0f;
+            sampleDisplay.pixelData[x + 800 * y].b = gui.uiColors[5] * 255.0f;
+            //sampleDisplay.pixelData[x + 800 * y].r = gui.uiColors[3] * (y - 192 + 16) * 16 * brightness;
+            //sampleDisplay.pixelData[x + 800 * y].g = gui.uiColors[4] * (y - 192 + 16) * 16;
+            //sampleDisplay.pixelData[x + 800 * y].b = gui.uiColors[5] * (y - 192 + 16) * 16;
         }
         for (int y = 0; y < 16; y++)
         {
-            sampleDisplay.pixelData[x + 800 * y].r = gui.uiColors[3] * (y) * 16 * brightness;
-            sampleDisplay.pixelData[x + 800 * y].g = gui.uiColors[4] * (y) * 16;
-            sampleDisplay.pixelData[x + 800 * y].b = gui.uiColors[5] * (y) * 16;
+            sampleDisplay.pixelData[x + 800 * y].r = gui.uiColors[3] * 255.0f;
+            sampleDisplay.pixelData[x + 800 * y].g = gui.uiColors[4] * 255.0f;
+            sampleDisplay.pixelData[x + 800 * y].b = gui.uiColors[5] * 255.0f;
         }
     }
 

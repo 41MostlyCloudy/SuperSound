@@ -104,7 +104,7 @@ const char* scrollBarVertexShaderSource = "#version 330 core\n"
 
 
 
-const char* knobVertexShaderSource = "#version 330 core\n"
+const char* dialVertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec2 aPos;\n"
 "layout (location = 1) in vec2 aTexCoord;\n"
 

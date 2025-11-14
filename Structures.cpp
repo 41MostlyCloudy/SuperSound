@@ -130,12 +130,12 @@ struct ScrollBar
 };
 
 
-struct Knob
+struct Dial
 {
 	Vector2 position;
 	float rotation = 0.0f; // The knobs position from 0 to 1.
-	Vector2 mouseOffset;
 	bool drag = false;
+	int channel = -1; // The number of the channel it is attached to. (-1 if not attached to a channel.)
 };
 
 
@@ -152,7 +152,7 @@ struct GUI
 	//{ { -1, -1 }, 0.0f, 49, true, false }, // sampleEditorScroll
 	};
 
-	std::vector <Knob> knobs =
+	std::vector <Dial> dials =
 	{
 		{}, {}, {}, {} // The sample editor ADSR filter.
 	};
@@ -340,6 +340,8 @@ struct Channel
 	bool loopNote = true;
 	bool toUninitialize = false;
 
+	// Synthesis
+	bool isSynth = false;
 	bool isModulator = false;
 	bool fmSynth = false; // AM or FM synthesis if used as a modulator.
 	float modulatorStrength = 0.0f;

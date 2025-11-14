@@ -15,7 +15,8 @@ void DrawPianoKey(Vector2 pos, int key, bool blackKey);
 
 void DrawMute();
 int DrawChannelMuteGlass(int xPos, int i);
-int DrawChannelMuteModulator(int xPos, int i, int knobNum);
+int DrawChannelMuteSynth(int xPos, int i);
+int DrawChannelMuteModulator(int xPos, int i, int dialNum);
 void DrawChannelNumber(int channelNum, int offsetX);
 
 void DrawFrameBorder();
@@ -40,7 +41,7 @@ void DrawFloatingWindow(FloatingWindow* wind);
 
 void DrawWaveTypeButton(int type, int xVal, int yVal);
 
-void DrawKnob(Vector2 pos, float val);
+void DrawDial(Vector2 pos, float val, int style);
 
 
 
@@ -277,7 +278,7 @@ void  DrawTopUI()
 
 	
 
-	DrawText("Samples", 70, 77, 0, 3, 0);
+	DrawText("Instruments", 70, 81, 0, 3, 0);
 	
 
 	// Draw keyboard
@@ -325,12 +326,14 @@ void  DrawTopUI()
 			{
 				DrawText(loadedSamples[y - 2 + gui.sampleListScroll].sampleName, 72, 91, y, 4, 0);
 				DrawHex(y - 2 + int(gui.sampleListScroll), 69, y, 3, 0);
+				gui.activeUI[90][y].sprite = { 26, 2 }; // Create sample button
 			}
 		}
 		else
 		{
 			DrawText("", 72, 91, y, 4, 0);
 			DrawHex(y - 2 + int(gui.sampleListScroll), 69, y, 2, 0);
+			gui.activeUI[90][y].sprite = { 26, 2 }; // Create sample button
 		}
 	}
 
@@ -636,26 +639,36 @@ void DrawMute()
 
 
 
-	int modCount = 0;
+	int modCount = 4;
 	int xPos = 5 - gui.frameScroll.x;
 	for (int i = 0; i < loadedSong.numberOfChannels; i++)
 	{
 		if (channels[i].isModulator)
 		{
-			if ((gui.knobs.size() + 4) <= modCount)
-			{
-				Knob newKnob;
-				gui.knobs.emplace_back(newKnob);
-			}
-			xPos = DrawChannelMuteModulator(xPos, i, modCount);
 			modCount++;
+			if ((gui.dials.size()) < modCount)
+			{
+				Dial newDial;
+				gui.dials.emplace_back(newDial);
+			}
+			xPos = DrawChannelMuteModulator(xPos, i, modCount - 1);
+
+
+			// gui.dials[knob].rotation = (val + 0.5f) * 6.2831f;
+
+			gui.dials[modCount - 1].rotation = (channels[i].modulatorStrength + 0.5f) * 6.2831f;
+			gui.dials[modCount - 1].channel = i;
+
+			//gui.dials[modCount - 1].rotation = (gui.dials[modCount - 1].rotation / 6.2831f) - 0.5f;
 		}
+		else if (channels[i].isSynth)
+			xPos = DrawChannelMuteSynth(xPos, i);
 		else
 			xPos = DrawChannelMuteGlass(xPos, i);
 	}
 
-	if (gui.knobs.size() + 4 > modCount)
-		gui.knobs.resize(gui.knobs.size() + 4);
+	if (gui.dials.size() > modCount)
+		gui.dials.resize(modCount);
 	
 
 
@@ -726,17 +739,37 @@ int DrawChannelMuteGlass(int xPos, int i)
 	{
 		if (xPos > 4)
 		{
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 11 + muteOffset, 3 }; gui.activeUI[xPos][14].sprite = { 11 + muteOffset, 4 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 13 + muteOffset, 3 }; gui.activeUI[xPos][14].sprite = { 13 + muteOffset, 4 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+			/*
 			if (channels[i].muted)
 				DrawNum(i + 1, xPos, xPos + 2, 13, 2, 0);
 			else
-				DrawNum(i + 1, xPos, xPos + 2, 13, 16, 0);
+			DrawNum(i + 1, xPos, xPos + 2, 13, 16, 0);
+			*/
 		}
-		xPos += 2;
+		//xPos += 2;
 		if (xPos > 90) return xPos;
 
 		if (xPos > 4)
 		{
 			gui.activeUI[xPos][13].sprite = { 27, 10 }; gui.activeUI[xPos][14].sprite = { 27, 11 };
+
+			if (channels[i].muted)
+				gui.activeUI[xPos][15].sprite = { 16, 15 };
+			else
+				gui.activeUI[xPos][15].sprite = { 16, 14 };
 		}
 		xPos++;
 
@@ -747,14 +780,7 @@ int DrawChannelMuteGlass(int xPos, int i)
 		// Glass
 		if (xPos > 4)
 		{
-			if (i > 0 && channels[i - 1].isModulator)
-			{
-				gui.activeUI[xPos][13].sprite = { 7, 14 }; gui.activeUI[xPos][14].sprite = { 7, 15 };
-			}
-			else
-			{
-				gui.activeUI[xPos][13].sprite = { 11 + muteOffset, 3 }; gui.activeUI[xPos][14].sprite = { 11 + muteOffset, 4 };
-			}
+			gui.activeUI[xPos][13].sprite = { 11 + muteOffset, 3 }; gui.activeUI[xPos][14].sprite = { 11 + muteOffset, 4 };
 		}
 		xPos++;
 		if (xPos > 90) return xPos;
@@ -925,6 +951,11 @@ int DrawChannelMuteGlass(int xPos, int i)
 		if (xPos > 4)
 		{
 			gui.activeUI[xPos][13].sprite = { 28, 10 }; gui.activeUI[xPos][14].sprite = { 28, 11 };
+
+			if (channels[i].muted)
+				gui.activeUI[xPos][15].sprite = { 16, 15 };
+			else
+				gui.activeUI[xPos][15].sprite = { 16, 14 };
 		}
 		xPos++;
 	}
@@ -934,7 +965,298 @@ int DrawChannelMuteGlass(int xPos, int i)
 
 
 
-int DrawChannelMuteModulator(int xPos, int i, int knobNum)
+int DrawChannelMuteSynth(int xPos, int i)
+{
+	// Border
+	for (int x = 0; x < 7 + channels[i].effectCountPerRow * 5; x++)
+	{
+		if (xPos + x > 4 && xPos + x < 91)
+		{
+			gui.activeUI[xPos + x][12].sprite = { 2, 3 }; gui.activeUI[xPos + x][15].sprite = { 2, 3 };
+		}
+	}
+	int muteBorderEnd = xPos + 7 + channels[i].effectCountPerRow * 5;
+	if (muteBorderEnd > 4 && muteBorderEnd < 91)
+	{
+		gui.activeUI[muteBorderEnd][12].sprite = { 3, 3 }; gui.activeUI[muteBorderEnd][15].sprite = { 5, 3 };
+	}
+
+	float muteOffset = 0;
+
+	if (channels[i].muted)
+		muteOffset = 3;
+
+	int color = 1;
+
+
+
+	if (channels[i].compressed)
+	{
+		if (xPos > 4)
+		{
+			if (i > 0 && channels[i - 1].isModulator)
+			{
+				gui.activeUI[xPos][13].sprite = { 7, 14 }; gui.activeUI[xPos][14].sprite = { 7, 15 };
+			}
+			else
+			{
+				gui.activeUI[xPos][13].sprite = { 0, 14 }; gui.activeUI[xPos][14].sprite = { 0, 15 };
+			}
+		}
+		xPos++;
+		if (xPos > 90) return xPos;
+
+		if (xPos > 4)
+		{
+			if (channels[i].muted)
+			{
+				gui.activeUI[xPos][13].sprite = { 17, 14 }; gui.activeUI[xPos][14].sprite = { 17, 15 };
+			}
+			else
+			{
+				gui.activeUI[xPos][13].sprite = { 15, 14 }; gui.activeUI[xPos][14].sprite = { 15, 15 };
+			}
+			
+		}
+		xPos++;
+
+		/*
+		if (xPos > 4)
+		{
+			DrawDial({ float(xPos), 13 }, 0);
+			gui.dials[dialNum].position = { float(xPos + 1), 14.0f };
+		}
+		xPos += 2;*/
+
+		if (xPos > 90) return xPos;
+
+		if (xPos > 4)
+		{
+			gui.activeUI[xPos][13].sprite = { 27, 10 }; gui.activeUI[xPos][14].sprite = { 27, 11 };
+
+			if (channels[i].muted)
+				gui.activeUI[xPos][15].sprite = { 16, 15 };
+			else
+				gui.activeUI[xPos][15].sprite = { 16, 14 };
+		}
+		xPos++;
+
+		if (xPos > 90) return xPos;
+	}
+	else
+	{
+		// Glass
+		if (xPos > 4)
+		{
+			if (i > 0 && channels[i - 1].isModulator)
+			{
+				gui.activeUI[xPos][13].sprite = { 7, 14 }; gui.activeUI[xPos][14].sprite = { 7, 15 };
+			}
+			else
+			{
+				gui.activeUI[xPos][13].sprite = { 0, 14 }; gui.activeUI[xPos][14].sprite = { 0, 15 };
+			}
+		}
+		xPos++;
+		if (xPos > 90) return xPos;
+
+		//DrawDial({ float(xPos), 13 }, 0);
+		//gui.dials[dialNum].position = { float(xPos + 1), 14.0f };
+
+		if (xPos > 90) return xPos;
+
+		if (xPos > 4)
+		{
+			gui.activeUI[xPos][13].sprite = { 6, 14 }; gui.activeUI[xPos][14].sprite = { 6, 15 };
+		}
+		xPos++;
+
+		for (int x = 0; x < 4; x++)
+		{
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				if (channels[i].muted)
+				{
+					gui.activeUI[xPos][13].sprite = { 17, 14 }; gui.activeUI[xPos][14].sprite = { 17, 15 };
+				}
+				else
+				{
+					gui.activeUI[xPos][13].sprite = { 15, 14 }; gui.activeUI[xPos][14].sprite = { 15, 15 };
+				}
+			}
+			xPos++;
+		}
+
+		
+
+
+		if (xPos > 90) return xPos;
+
+		if (xPos > 4)
+		{
+			gui.activeUI[xPos][13].sprite = { 1, 14 }; gui.activeUI[xPos][14].sprite = { 1, 15 };
+		}
+		xPos++;
+
+		// Draw the channel effects
+		if (channels[i].effectCountPerRow > 1)
+		{
+			for (int ef = 0; ef < channels[i].effectCountPerRow - 1; ef++)
+			{
+				if (xPos > 90) return xPos;
+
+				if (xPos > 4)
+				{
+					gui.activeUI[xPos][13].sprite = { 6, 14 }; gui.activeUI[xPos][14].sprite = { 6, 15 };
+				}
+				xPos++;
+				if (xPos > 90) return xPos;
+
+				if (xPos > 4)
+				{
+					gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+				}
+				xPos++;
+				if (xPos > 90) return xPos;
+
+				if (xPos > 4)
+				{
+					gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+				}
+				xPos++;
+				if (xPos > 90) return xPos;
+
+				if (xPos > 4)
+				{
+					gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+				}
+				xPos++;
+				if (xPos > 90) return xPos;
+
+				if (xPos > 4)
+				{
+					gui.activeUI[xPos][13].sprite = { 1, 14 }; gui.activeUI[xPos][14].sprite = { 1, 15 };
+				}
+				xPos++;
+			}
+
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				if (channels[i].effectCountPerRow < 8)
+				{
+					gui.activeUI[xPos][13].sprite = { 2, 14 }; gui.activeUI[xPos][14].sprite = { 2, 15 };
+				}
+				else
+				{
+					gui.activeUI[xPos][13].sprite = { 6, 14 }; gui.activeUI[xPos][14].sprite = { 6, 15 };
+				}
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 3, 14 }; gui.activeUI[xPos][14].sprite = { 3, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				if (i < channels.size() - 1)
+				{
+					gui.activeUI[xPos][13].sprite = { 5, 14 }; gui.activeUI[xPos][14].sprite = { 5, 15 };
+				}
+				else
+				{
+					gui.activeUI[xPos][13].sprite = { 9, 14 }; gui.activeUI[xPos][14].sprite = { 9, 15 };
+				}
+			}
+			xPos++;
+		}
+		else
+		{
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 2, 14 }; gui.activeUI[xPos][14].sprite = { 2, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 4, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
+			}
+			xPos++;
+			if (xPos > 90) return xPos;
+
+			if (xPos > 4)
+			{
+				gui.activeUI[xPos][13].sprite = { 8, 14 }; gui.activeUI[xPos][14].sprite = { 8, 15 };
+			}
+
+			xPos++;
+		}
+
+
+
+		if (xPos > 90) return xPos;
+
+
+		if (xPos > 4)
+		{
+			gui.activeUI[xPos][13].sprite = { 27, 10 }; gui.activeUI[xPos][14].sprite = { 27, 11 };
+
+			if (channels[i].muted)
+				gui.activeUI[xPos][15].sprite = { 16, 15 };
+			else
+				gui.activeUI[xPos][15].sprite = { 16, 14 };
+		}
+		xPos++;
+	}
+
+	return xPos;
+}
+
+
+
+
+int DrawChannelMuteModulator(int xPos, int i, int dialNum)
 {
 	// Border
 	for (int x = 0; x < 7 + channels[i].effectCountPerRow * 5; x++)
@@ -965,30 +1287,18 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 	{
 		if (xPos > 4)
 		{
-			if (i > 0 && channels[i - 1].isModulator)
-			{
-				gui.activeUI[xPos][13].sprite = { 7, 14 }; gui.activeUI[xPos][14].sprite = { 7, 15 };
-			}
+			if (channels[i].muted)
+				DrawDial({ float(xPos), 13 }, 0, 0);
 			else
-			{
-				gui.activeUI[xPos][13].sprite = { 0, 14 }; gui.activeUI[xPos][14].sprite = { 0, 15 };
-			}
-
-			if (i < channels.size() - 1)
-			{
-				gui.activeUI[xPos + 1][13].sprite = { 5, 14 }; gui.activeUI[xPos + 1][14].sprite = { 5, 15 };
-			}
-			else
-			{
-				gui.activeUI[xPos + 1][13].sprite = { 9, 14 }; gui.activeUI[xPos + 1][14].sprite = { 9, 15 };
-			}
+				DrawDial({ float(xPos), 13 }, 0, 1);
+			gui.dials[dialNum].position = { float(xPos + 1), 14.0f };
 		}
 		xPos += 2;
 		if (xPos > 90) return xPos;
 
 		if (xPos > 4)
 		{
-			if (i < channels.size() - 1)
+			if (i < channels.size() - 1 && channels[i + 1].isSynth)
 			{
 				gui.activeUI[xPos][13].sprite = { 10, 14 }; gui.activeUI[xPos][14].sprite = { 10, 15 };
 			}
@@ -996,6 +1306,11 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 			{
 				gui.activeUI[xPos][13].sprite = { 27, 10 }; gui.activeUI[xPos][14].sprite = { 27, 11 };
 			}
+
+			if (channels[i].muted)
+				gui.activeUI[xPos][15].sprite = { 16, 15 };
+			else
+				gui.activeUI[xPos][15].sprite = { 16, 14 };
 		}
 		xPos++;
 
@@ -1018,26 +1333,20 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 		xPos++;
 		if (xPos > 90) return xPos;
 
-		DrawKnob({ float(xPos), 13 }, 0);
-		gui.knobs[knobNum].position = { float(xPos), 13.0f };
-		//gui.knobs[i].
+		if (channels[i].muted)
+			DrawDial({ float(xPos), 13 }, 0, 0);
+		else
+			DrawDial({ float(xPos), 13 }, 0, 1);
+		gui.dials[dialNum].position = { float(xPos + 1), 14.0f };
 		
 		xPos += 2;
 		if (xPos > 90) return xPos;
 
 		if (xPos > 4)
 		{
-			gui.activeUI[xPos][13].sprite = { 12, 14 }; gui.activeUI[xPos][14].sprite = { 4, 15 };
-		}
-		xPos++;
-
-		if (xPos > 90) return xPos;
-
-		if (xPos > 4)
-		{
-			gui.activeUI[xPos][13].sprite = { 13, 14 };
+			gui.activeUI[xPos][13].sprite = { 12, 14 };
 			if (channels[i].fmSynth)
-				gui.activeUI[xPos][14].sprite = { 14, 15 };
+				gui.activeUI[xPos][14].sprite = { 12, 16 };
 			else
 				gui.activeUI[xPos][14].sprite = { 12, 15 };
 		}
@@ -1047,11 +1356,23 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 
 		if (xPos > 4)
 		{
-			gui.activeUI[xPos][13].sprite = { 14, 14 };
+			gui.activeUI[xPos][13].sprite = { 13, 14 };
 			if (channels[i].fmSynth)
-				gui.activeUI[xPos][14].sprite = { 15, 15 };
+				gui.activeUI[xPos][14].sprite = { 13, 16 };
 			else
 				gui.activeUI[xPos][14].sprite = { 13, 15 };
+		}
+		xPos++;
+
+		if (xPos > 90) return xPos;
+
+		if (xPos > 4)
+		{
+			gui.activeUI[xPos][13].sprite = { 14, 14 };
+			if (channels[i].fmSynth)
+				gui.activeUI[xPos][14].sprite = { 14, 16 };
+			else
+				gui.activeUI[xPos][14].sprite = { 14, 15 };
 		}
 		xPos++;
 
@@ -1190,7 +1511,7 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 
 			if (xPos > 4)
 			{
-				if (i < channels.size() - 1)
+				if (i < channels.size() - 1 && channels[i + 1].isSynth)
 				{
 					gui.activeUI[xPos][13].sprite = { 5, 14 }; gui.activeUI[xPos][14].sprite = { 5, 15 };
 				}
@@ -1210,7 +1531,7 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 
 		if (xPos > 4)
 		{
-			if (i < channels.size() - 1)
+			if (i < channels.size() - 1 && channels[i + 1].isSynth)
 			{
 				gui.activeUI[xPos][13].sprite = { 11, 14 }; gui.activeUI[xPos][14].sprite = { 11, 15 };
 			}
@@ -1218,6 +1539,11 @@ int DrawChannelMuteModulator(int xPos, int i, int knobNum)
 			{
 				gui.activeUI[xPos][13].sprite = { 27, 10 }; gui.activeUI[xPos][14].sprite = { 27, 11 };
 			}
+
+			if (channels[i].muted)
+				gui.activeUI[xPos][15].sprite = { 16, 15 };
+			else
+				gui.activeUI[xPos][15].sprite = { 16, 14 };
 		}
 		xPos++;
 	}
@@ -2883,23 +3209,23 @@ void DrawFloatingWindow(FloatingWindow* wind)
 		//DrawText("ADSR", wind->position.x + 3, wind->position.x + 7, wind->position.y + 6, 3, 0);
 		if (loadedSamples.size() > 0)
 			DrawText("A  " + std::to_string(loadedSamples[editor.selectedSample].attack), wind->position.x + 2, wind->position.x + 12, wind->position.y + 6, 3, 0);
-		DrawKnob({ wind->position.x + 3, wind->position.y + 6 }, loadedSamples[editor.selectedSample].attack);
-		gui.knobs[0].position = { wind->position.x + 4, wind->position.y + 7 };
+		DrawDial({ wind->position.x + 3, wind->position.y + 6 }, loadedSamples[editor.selectedSample].attack, 2);
+		gui.dials[0].position = { wind->position.x + 4, wind->position.y + 7 };
 
 		if (loadedSamples.size() > 0)
 			DrawText("D  " + std::to_string(loadedSamples[editor.selectedSample].decay), wind->position.x + 2, wind->position.x + 12, wind->position.y + 8, 3, 0);
-		DrawKnob({ wind->position.x + 3, wind->position.y + 8 }, loadedSamples[editor.selectedSample].decay);
-		gui.knobs[1].position = { wind->position.x + 4, wind->position.y + 9 };
+		DrawDial({ wind->position.x + 3, wind->position.y + 8 }, loadedSamples[editor.selectedSample].decay, 2);
+		gui.dials[1].position = { wind->position.x + 4, wind->position.y + 9 };
 
 		if (loadedSamples.size() > 0)
 			DrawText("S  " + std::to_string(loadedSamples[editor.selectedSample].sustain), wind->position.x + 2, wind->position.x + 12, wind->position.y + 10, 3, 0);
-		DrawKnob({ wind->position.x + 3, wind->position.y + 10 }, loadedSamples[editor.selectedSample].sustain);
-		gui.knobs[2].position = { wind->position.x + 4, wind->position.y + 11 };
+		DrawDial({ wind->position.x + 3, wind->position.y + 10 }, loadedSamples[editor.selectedSample].sustain, 2);
+		gui.dials[2].position = { wind->position.x + 4, wind->position.y + 11 };
 
 		if (loadedSamples.size() > 0)
 			DrawText("R  " + std::to_string(loadedSamples[editor.selectedSample].release), wind->position.x + 2, wind->position.x + 12, wind->position.y + 12, 3, 0);
-		DrawKnob({ wind->position.x + 3, wind->position.y + 12 }, loadedSamples[editor.selectedSample].release);
-		gui.knobs[3].position = { wind->position.x + 4, wind->position.y + 13 };
+		DrawDial({ wind->position.x + 3, wind->position.y + 12 }, loadedSamples[editor.selectedSample].release, 2);
+		gui.dials[3].position = { wind->position.x + 4, wind->position.y + 13 };
 
 		/*
 		if (sampleDisplay.modulatorSelected)
@@ -3062,101 +3388,17 @@ void DrawWaveTypeButton(int type, int xVal, int yVal)
 
 
 
-void DrawKnob(Vector2 pos, float val)
+void DrawDial(Vector2 pos, float val, int style)
 {
-	// 0 - 0.125
 
-	// 0.125 - 0.25
-
-	// 0.25 - 0.375
-
-	// 0.375 - 0.5
-
-	// 0.5 - 0.625
 	
-	// 0.625 - 0.75
+	gui.activeUI[int(pos.x)][int(pos.y)].sprite = { float(2 + style * 2), 7 };
+	gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { float(3 + style * 2), 7 };
 
-	// 0.75 - 0.875
-
-	// 0.875 - 1.0
-
-
-	gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 6, 7 };
-	gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 7, 7 };
-
-	gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 6, 8 };
-	gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 7, 8 };
+	gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { float(2 + style * 2), 8 };
+	gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { float(3 + style * 2), 8 };
 
 
-	/*
-	val += 0.125 * 0.25f;
-
-
-	if (val < 0.125)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 0, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 1, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 4, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 5, 8 };
-	}
-	else if (val < 0.25)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 0, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 1, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 6, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 1, 8 };
-	}
-	else if (val < 0.375)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 2, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 1, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 2, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 1, 8 };
-	}
-	else if (val < 0.5)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 6, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 1, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 0, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 1, 8 };
-	}
-	else if (val < 0.625)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 4, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 5, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 0, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 1, 8 };
-	}
-	else if (val < 0.75)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 0, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 7, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 0, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 1, 8 };
-	}
-	else if (val < 0.875)
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 0, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 3, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 0, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 3, 8 };
-	}
-	else
-	{
-		gui.activeUI[int(pos.x)][int(pos.y)].sprite = { 0, 7 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y)].sprite = { 1, 7 };
-
-		gui.activeUI[int(pos.x)][int(pos.y + 1)].sprite = { 0, 8 };
-		gui.activeUI[int(pos.x + 1)][int(pos.y + 1)].sprite = { 7, 8 };
-	}
-	*/
 
 
 	return;
